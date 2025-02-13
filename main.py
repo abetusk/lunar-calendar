@@ -100,11 +100,14 @@ class Calendar:
 
         return path_left + path_right
 
-    def _make_path_mask(self, lunation, view_box_size):
+    def _make_path_mask(self, lunation, view_box_size, moon_opt):
         terminator_arc_radius, right_of_centre, lit_from_left = self._calc_terminator_arc(lunation, view_box_size/2)
 
         LIGHT_CSS_CLASS   = 'lightMask'
         SHADOW_CSS_CLASS  = 'shadowMask'
+
+        #if moon_opt["blue"]: SHADOW_CSS_CLASS = 'lightBlueMask'
+        #if moon_opt["black"]: SHADOW_CSS_CLASS = 'shadowFullMask'
 
         colour_left  = LIGHT_CSS_CLASS if lit_from_left else SHADOW_CSS_CLASS
         colour_right = SHADOW_CSS_CLASS if lit_from_left else LIGHT_CSS_CLASS
@@ -130,12 +133,10 @@ class Calendar:
 
         lunation = (date - preceding_new_moon) / (following_new_moon - preceding_new_moon)
 
-        _id = "mask_" + "".join(random.choices(['a', 'b', 'c', 'd', 'e', 'f', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], k=20))
-
         VIEW_BOX_SIZE = 100
         return '<svg width="100%" viewBox="0 0 {0} {0}">{1}</svg>'.format(VIEW_BOX_SIZE, self._make_path(lunation, VIEW_BOX_SIZE))
 
-    def _generate_moon_image(self, year, month, day):
+    def _generate_moon_image(self, year, month, day, moon_opt):
         date = ephem.Date(datetime.date(year, month, day))
 
         preceding_new_moon = ephem.previous_new_moon(date)
@@ -143,13 +144,15 @@ class Calendar:
 
         lunation = (date - preceding_new_moon) / (following_new_moon - preceding_new_moon)
 
-        _id = "mask_" + "".join(random.choices(['a', 'b', 'c', 'd', 'e', 'f', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], k=20))
+        mask_id = "mask_" + "".join(random.choices(['a', 'b', 'c', 'd', 'e', 'f', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], k=20))
 
         VIEW_BOX_SIZE = 1
-        svg_str = '<svg width="0" height="0"><mask id="{0}" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">{1}</mask></svg>'.format(_id, self._make_path_mask(lunation, VIEW_BOX_SIZE))
+        svg_str = "".join([
+          '<svg width="0" height="0">',
+          '<mask id="{0}" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">{1}</mask>',
+          '</svg>']).format(mask_id, self._make_path_mask(lunation, VIEW_BOX_SIZE, moon_opt))
 
-        #return '\n{1} <img src="data/supermoon_l3_bw.png" width="90%" style="mask: url(#{0}); -webkit-mask: url(#{0});"></img>'.format(_id, svg_str)
-        return '\n{1} <img src="{2}" width="90%" style="mask: url(#{0}); -webkit-mask: url(#{0});"></img>'.format(_id, svg_str, self.moon_image)
+        return '\n{0} <img src="{1}" width="93%" style="mask: url(#{2}); -webkit-mask: url(#{2});"></img>'.format(svg_str, self.moon_image, mask_id)
 
     def _get_moon_dates(self, year, next_fn):
         start_of_year = ephem.Date(datetime.date(year, 1, 1))
@@ -166,7 +169,9 @@ class Calendar:
             formatted_date = date_and_time.strftime('%d %b %H:%M')
             second_in_month = date_and_time.month == previous_month
 
-            moon_dates.append((formatted_date, second_in_month))
+            yyyy_m_d = date_and_time.strftime("%Y/%-m/%-d")
+
+            moon_dates.append((formatted_date, second_in_month, yyyy_m_d))
             previous_month = date_and_time.month
 
         return moon_dates[:-1]
@@ -176,29 +181,55 @@ class Calendar:
 
     def populate(self, year, moon_image=''):
 
+        def build_markup(moon_dates, second_in_month_class):
+            markup = []
+            for moon_date in moon_dates:
+                date, second_in_month, _ = moon_date
+                markup.append('<span class="{}">{}</span>'.format(second_in_month_class if second_in_month else '', date))
+            return markup
+
+        new_moon_dates  = self._get_moon_dates(year, ephem.next_new_moon)
+        full_moon_dates = self._get_moon_dates(year, ephem.next_full_moon)
+
+        new_moon_map = {}
+        full_moon_map = {}
+        for md in new_moon_dates:
+            dt, second_in_month, yyyy_m_d = md
+            new_moon_map[yyyy_m_d] = second_in_month
+
+        for md in full_moon_dates:
+            dt, second_in_month, yyyy_m_d = md
+            full_moon_map[yyyy_m_d] = second_in_month
+
         if len(moon_image) > 0:
             self.moon_image = moon_image
 
         for month in range(1, 13):
             _, days_in_month = calendar.monthrange(year, month)
             for day in range(1, days_in_month + 1):
+                yyyy_m_d_str = str(year) + "/" + str(month) + "/" + str(day)
+
+                moon_opt = {
+                  "full": False,
+                  "new": False,
+                  "blue": False,
+                  "black": False
+                }
+
+                if yyyy_m_d_str in new_moon_map:
+                    moon_opt["new"] = True
+                    moon_opt["black"] = new_moon_map[yyyy_m_d_str]
+
+                if yyyy_m_d_str in full_moon_map:
+                    moon_opt["full"] = True
+                    moon_opt["blue"] = full_moon_map[yyyy_m_d_str]
+
                 key = self._moon_key(month, day)
                 if len(moon_image) > 0:
-                  moon = self._generate_moon_image(year, month, day)
+                  moon = self._generate_moon_image(year, month, day, moon_opt)
                 else:
                   moon = self._generate_moon(year, month, day)
                 self._replace_in_html(key, moon)
-
-        new_moon_dates  = self._get_moon_dates(year, ephem.next_new_moon)
-        full_moon_dates = self._get_moon_dates(year, ephem.next_full_moon)
-
-        def build_markup(moon_dates, second_in_month_class):
-            markup = []
-            for moon_date in moon_dates:
-                date, second_in_month = moon_date
-                markup.append('<span class="{}">{}</span>'.format(second_in_month_class if second_in_month else '', date))
-
-            return markup
 
         self._replace_in_html('YEAR', str(year))
 
