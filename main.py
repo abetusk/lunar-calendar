@@ -6,6 +6,7 @@ import sys
 
 import getopt
 import random
+import re
 
 '''
 Lunar Calendar Generator
@@ -35,9 +36,18 @@ DEFAULT_MOON_IMAGE = 'data/supermoon_l3_bw.png'
 class Calendar:
     def __init__(self):
         self.html = open('template.html').read()
+        self.moon_image = ""
+        self.succinct_opt = False
+
+    def succinct(self, opt=True):
+        self.succinct_opt = opt
 
     def _replace_in_html(self, key, value):
         self.html = self.html.replace('<!-- {} -->'.format(key), value)
+
+    def _replace_in_html_wrapper(self, key, value):
+        s = '<!-- {0}_BEG -->.*<!-- {0}_END -->'.format(key)
+        self.html = re.sub( s, value, self.html )
 
     def _calc_terminator_arc(self, lunation, disc_radius):
         right_of_centre = None
@@ -96,10 +106,6 @@ class Calendar:
         LIGHT_CSS_CLASS   = 'lightMask'
         SHADOW_CSS_CLASS  = 'shadowMask'
 
-        #LIGHT_CSS_CLASS = "white"
-        #SHADOW_CSS_CLASS = "black"
-        #SHADOW_CSS_CLASS = "rgba(255,255,255,0.18)"
-
         colour_left  = LIGHT_CSS_CLASS if lit_from_left else SHADOW_CSS_CLASS
         colour_right = SHADOW_CSS_CLASS if lit_from_left else LIGHT_CSS_CLASS
 
@@ -110,9 +116,6 @@ class Calendar:
         disc_right_arc = 'A {0} {0} 0 0 0 {0} 0'.format(view_box_size/2.0)
         terminator_arc = 'A {0} {0} 0 0 {1} {2} {3}'.format(
             terminator_arc_radius, 1 if right_of_centre else 0, view_box_size/2.0, view_box_size)
-
-        #path_left  = '<path d="{0} {1} {2}" fill="{3}"/>'.format(move_to_top, terminator_arc, disc_left_arc, colour_left)
-        #path_right = '<path d="{0} {1} {2}" fill="{3}"/>'.format(move_to_top, terminator_arc, disc_right_arc, colour_right)
 
         path_left  = '<path d="{0} {1} {2}" class="{3}"/>'.format(move_to_top, terminator_arc, disc_left_arc, colour_left)
         path_right = '<path d="{0} {1} {2}" class="{3}"/>'.format(move_to_top, terminator_arc, disc_right_arc, colour_right)
@@ -145,7 +148,8 @@ class Calendar:
         VIEW_BOX_SIZE = 1
         svg_str = '<svg width="0" height="0"><mask id="{0}" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">{1}</mask></svg>'.format(_id, self._make_path_mask(lunation, VIEW_BOX_SIZE))
 
-        return '\n{1} <img src="data/supermoon_l3_bw.png" width="90%" style="mask: url(#{0}); -webkit-mask: url(#{0});"></img>'.format(_id, svg_str)
+        #return '\n{1} <img src="data/supermoon_l3_bw.png" width="90%" style="mask: url(#{0}); -webkit-mask: url(#{0});"></img>'.format(_id, svg_str)
+        return '\n{1} <img src="{2}" width="90%" style="mask: url(#{0}); -webkit-mask: url(#{0});"></img>'.format(_id, svg_str, self.moon_image)
 
     def _get_moon_dates(self, year, next_fn):
         start_of_year = ephem.Date(datetime.date(year, 1, 1))
@@ -170,13 +174,19 @@ class Calendar:
     def _moon_key(self, m, d):
         return 'MOON_{:02d}_{:02d}'.format(m, d)
 
-    def populate(self, year):
+    def populate(self, year, moon_image=''):
+
+        if len(moon_image) > 0:
+            self.moon_image = moon_image
+
         for month in range(1, 13):
             _, days_in_month = calendar.monthrange(year, month)
             for day in range(1, days_in_month + 1):
                 key = self._moon_key(month, day)
-                moon = self._generate_moon(year, month, day)
-                #moon = self._generate_moon_image(year, month, day)
+                if len(moon_image) > 0:
+                  moon = self._generate_moon_image(year, month, day)
+                else:
+                  moon = self._generate_moon(year, month, day)
                 self._replace_in_html(key, moon)
 
         new_moon_dates  = self._get_moon_dates(year, ephem.next_new_moon)
@@ -195,8 +205,14 @@ class Calendar:
         new_moon_markup  = build_markup(new_moon_dates,  'blackMoon')
         full_moon_markup = build_markup(full_moon_dates, 'blueMoon')
 
-        self._replace_in_html('NEW_MOONS',  ''.join(new_moon_markup))
-        self._replace_in_html('FULL_MOONS', ''.join(full_moon_markup))
+        if self.succinct_opt:
+            self._replace_in_html_wrapper('NEW_MOONS_WRAPPER',  '')
+            self._replace_in_html_wrapper('FULL_MOONS_WRAPPER', '')
+            self._replace_in_html_wrapper('FOOTER_WRAPPER', '')
+        else:
+            self._replace_in_html('NEW_MOONS',  ''.join(new_moon_markup))
+            self._replace_in_html('FULL_MOONS', ''.join(full_moon_markup))
+
 
 
     def save(self, path):
@@ -239,16 +255,18 @@ def usage(io):
     io.write("\n")
 
 
-def _main():
+def main():
     #moon_img = 'data/supermoon_l3_bw.png'
     moon_img = DEFAULT_MOON_IMAGE
     output_file = ''
     year = None
 
     moon_img_opt = False
+    succinct_opt = False
+    extra_opt = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hvo:y:Mi:", ["help", "version", "year=", "output=", "image=", "moon"])
+        opts, args = getopt.getopt(sys.argv[1:], "hvo:y:Mi:SE", ["help", "version", "year=", "output=", "image=", "moon", "succinct", "extra"])
     except getopt.GetoptError as err:
         sys.stderr.write(str(err) + "\n")
         usage(sys.stderr)
@@ -270,6 +288,10 @@ def _main():
         elif opt in ["-i", "--image"]:
             moon_img = arg
             moon_img_opt = True
+        elif opt in ["-S", "--succinct"]:
+            succinct_opt = True
+        elif opt in ["-E", "--extra"]:
+            extra_opt = True
         else:
             sys.stderr.write("Unknown option: " + opt)
             usage(sys.stdout)
@@ -282,41 +304,31 @@ def _main():
         output_file = 'lunar_calendar_{}.html'.format(year)
 
     if year is None:
-        sys.stderr.write("\nError, please specify a year\n\n")
+        sys.stderr.write('\nError, please specify a year: python {} <year>\n\n'.format(sys.argv[0]))
         usage(sys.stderr)
         sys.exit(1)
 
     try:
         year = int(year)
     except:
-        sys.stderr.write("\nError, please specify a year\n\n")
+        sys.stderr.write('\nError, please specify a year: python {} <year>\n\n'.format(sys.argv[0]))
         usage(sys.stderr)
         sys.exit(1)
     
     cal = Calendar()
-    cal.populate(year)
-    output_file = 'lunar_calendar_{}.html'.format(year)
+
+    if succinct_opt:
+        cal.succinct()
+
+    if moon_img_opt:
+        cal.populate(year, moon_img)
+    else:
+        cal.populate(year)
     cal.save(output_file)
     
     print('Success! Calendar saved to file {}'.format(output_file))
 
 
-if __name__ == '__main__':
-    _main()
-
-else:
-    year = None
-    try:
-        year = int(sys.argv[1])
-    except:
-        print('Error, please specify a year: python {} <year>'.format(sys.argv[0]))
-        sys.exit(1)
-    
-    cal = Calendar()
-    cal.populate(year)
-    output_file = 'lunar_calendar_{}.html'.format(year)
-    cal.save(output_file)
-    
-    print('Success! Calendar saved to file {}'.format(output_file))
-
-
+if __name__ == "__main__":
+    main()
+    sys.exit(0)
