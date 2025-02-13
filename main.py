@@ -4,6 +4,9 @@ import ephem # see http://rhodesmill.org/pyephem/
 import math
 import sys
 
+import getopt
+import random
+
 '''
 Lunar Calendar Generator
 
@@ -25,6 +28,9 @@ This source code is released under the MIT Open Source License
 
 © 2018 Rob Dawson
 '''
+
+LUNAR_CALENDAR_VERSION = "0.2.0"
+DEFAULT_MOON_IMAGE = 'data/supermoon_l3_bw.png'
 
 class Calendar:
     def __init__(self):
@@ -84,6 +90,35 @@ class Calendar:
 
         return path_left + path_right
 
+    def _make_path_mask(self, lunation, view_box_size):
+        terminator_arc_radius, right_of_centre, lit_from_left = self._calc_terminator_arc(lunation, view_box_size/2)
+
+        LIGHT_CSS_CLASS   = 'lightMask'
+        SHADOW_CSS_CLASS  = 'shadowMask'
+
+        #LIGHT_CSS_CLASS = "white"
+        #SHADOW_CSS_CLASS = "black"
+        #SHADOW_CSS_CLASS = "rgba(255,255,255,0.18)"
+
+        colour_left  = LIGHT_CSS_CLASS if lit_from_left else SHADOW_CSS_CLASS
+        colour_right = SHADOW_CSS_CLASS if lit_from_left else LIGHT_CSS_CLASS
+
+        view_box_size = 1.0
+
+        move_to_top    = 'M{0},0'.format(view_box_size/2.0)
+        disc_left_arc  = 'A {0} {0} 0 0 1 {0} 0'.format(view_box_size/2.0)
+        disc_right_arc = 'A {0} {0} 0 0 0 {0} 0'.format(view_box_size/2.0)
+        terminator_arc = 'A {0} {0} 0 0 {1} {2} {3}'.format(
+            terminator_arc_radius, 1 if right_of_centre else 0, view_box_size/2.0, view_box_size)
+
+        #path_left  = '<path d="{0} {1} {2}" fill="{3}"/>'.format(move_to_top, terminator_arc, disc_left_arc, colour_left)
+        #path_right = '<path d="{0} {1} {2}" fill="{3}"/>'.format(move_to_top, terminator_arc, disc_right_arc, colour_right)
+
+        path_left  = '<path d="{0} {1} {2}" class="{3}"/>'.format(move_to_top, terminator_arc, disc_left_arc, colour_left)
+        path_right = '<path d="{0} {1} {2}" class="{3}"/>'.format(move_to_top, terminator_arc, disc_right_arc, colour_right)
+
+        return path_left + path_right
+
     def _generate_moon(self, year, month, day):
         date = ephem.Date(datetime.date(year, month, day))
 
@@ -92,8 +127,25 @@ class Calendar:
 
         lunation = (date - preceding_new_moon) / (following_new_moon - preceding_new_moon)
 
+        _id = "mask_" + "".join(random.choices(['a', 'b', 'c', 'd', 'e', 'f', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], k=20))
+
         VIEW_BOX_SIZE = 100
         return '<svg width="100%" viewBox="0 0 {0} {0}">{1}</svg>'.format(VIEW_BOX_SIZE, self._make_path(lunation, VIEW_BOX_SIZE))
+
+    def _generate_moon_image(self, year, month, day):
+        date = ephem.Date(datetime.date(year, month, day))
+
+        preceding_new_moon = ephem.previous_new_moon(date)
+        following_new_moon = ephem.next_new_moon(date)
+
+        lunation = (date - preceding_new_moon) / (following_new_moon - preceding_new_moon)
+
+        _id = "mask_" + "".join(random.choices(['a', 'b', 'c', 'd', 'e', 'f', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], k=20))
+
+        VIEW_BOX_SIZE = 1
+        svg_str = '<svg width="0" height="0"><mask id="{0}" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">{1}</mask></svg>'.format(_id, self._make_path_mask(lunation, VIEW_BOX_SIZE))
+
+        return '\n{1} <img src="data/supermoon_l3_bw.png" width="90%" style="mask: url(#{0}); -webkit-mask: url(#{0});"></img>'.format(_id, svg_str)
 
     def _get_moon_dates(self, year, next_fn):
         start_of_year = ephem.Date(datetime.date(year, 1, 1))
@@ -124,6 +176,7 @@ class Calendar:
             for day in range(1, days_in_month + 1):
                 key = self._moon_key(month, day)
                 moon = self._generate_moon(year, month, day)
+                #moon = self._generate_moon_image(year, month, day)
                 self._replace_in_html(key, moon)
 
         new_moon_dates  = self._get_moon_dates(year, ephem.next_new_moon)
@@ -149,7 +202,109 @@ class Calendar:
     def save(self, path):
         open(path, 'w').write(self.html)
 
+old = False
+if old:
+  if __name__ == '__main__':
+      year = None
+      try:
+          year = int(sys.argv[1])
+      except:
+          print('Error, please specify a year: python {} <year>'.format(sys.argv[0]))
+          sys.exit(1)
+      
+      cal = Calendar()
+      cal.populate(year)
+      output_file = 'lunar_calendar_{}.html'.format(year)
+      cal.save(output_file)
+      
+      print('Success! Calendar saved to file {}'.format(output_file))
+
+def version(io):
+    io.write("Version: " + LUNAR_CALENDAR_VERSION + "\n")
+
+def usage(io):
+    io.write("Lunar Calendar generator\n")
+    version(io)
+    io.write("\n")
+    io.write("usage:\n")
+    io.write("\n")
+    io.write("  python3 main.py [-h] [-v] [-y year] [-o output_file] [-i moon_image] [year]\n")
+    io.write("\n")
+    io.write("    -y year         Year to generate\n")
+    io.write("    -o output_file  Output HTML (default 'lunar_calendar_YEAR.html')\n")
+    io.write("    -M              Use moon image\n")
+    io.write("    -i moon_image   Moon image to use ('{0}')\n".format(DEFAULT_MOON_IMAGE))
+    io.write("    -h              Help (this screen)\n")
+    io.write("    -v              Print version\n")
+    io.write("\n")
+
+
+def _main():
+    #moon_img = 'data/supermoon_l3_bw.png'
+    moon_img = DEFAULT_MOON_IMAGE
+    output_file = ''
+    year = None
+
+    moon_img_opt = False
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hvo:y:Mi:", ["help", "version", "year=", "output=", "image=", "moon"])
+    except getopt.GetoptError as err:
+        sys.stderr.write(str(err) + "\n")
+        usage(sys.stderr)
+        sys.exit(2)
+
+    for opt,arg in opts:
+        if opt in ["-h", "--help"]:
+            usage(sys.stdout)
+            sys.exit(0)
+        elif opt in ["-v", "--version"]:
+            version(sys.stdout)
+            sys.exit(0)
+        elif opt in ["-o", "--output"]:
+            output_file = arg
+        elif opt in ["-y", "--year"]:
+            year = arg
+        elif opt in ["-M", "--moon"]:
+            moon_img_opt = True
+        elif opt in ["-i", "--image"]:
+            moon_img = arg
+            moon_img_opt = True
+        else:
+            sys.stderr.write("Unknown option: " + opt)
+            usage(sys.stdout)
+            sys.exit(2)
+
+    if len(args) > 0:
+        year = args[0]
+
+    if len(output_file) == 0:
+        output_file = 'lunar_calendar_{}.html'.format(year)
+
+    if year is None:
+        sys.stderr.write("\nError, please specify a year\n\n")
+        usage(sys.stderr)
+        sys.exit(1)
+
+    try:
+        year = int(year)
+    except:
+        sys.stderr.write("\nError, please specify a year\n\n")
+        usage(sys.stderr)
+        sys.exit(1)
+    
+    cal = Calendar()
+    cal.populate(year)
+    output_file = 'lunar_calendar_{}.html'.format(year)
+    cal.save(output_file)
+    
+    print('Success! Calendar saved to file {}'.format(output_file))
+
+
 if __name__ == '__main__':
+    _main()
+
+else:
     year = None
     try:
         year = int(sys.argv[1])
@@ -163,3 +318,5 @@ if __name__ == '__main__':
     cal.save(output_file)
     
     print('Success! Calendar saved to file {}'.format(output_file))
+
+
