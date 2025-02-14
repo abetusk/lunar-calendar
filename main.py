@@ -118,9 +118,6 @@ class Calendar:
         LIGHT_CSS_CLASS   = 'lightMask'
         SHADOW_CSS_CLASS  = 'shadowMask'
 
-        #if moon_opt["blue"]: SHADOW_CSS_CLASS = 'lightBlueMask'
-        #if moon_opt["black"]: SHADOW_CSS_CLASS = 'shadowFullMask'
-
         colour_left  = LIGHT_CSS_CLASS if lit_from_left else SHADOW_CSS_CLASS
         colour_right = SHADOW_CSS_CLASS if lit_from_left else LIGHT_CSS_CLASS
 
@@ -327,6 +324,10 @@ class Calendar:
 
         if len(self.bg_color) > 0:
             self._replace_in_html_wrapper('BG_COLOR_WRAPPER', "background-color: {0};".format(self.bg_color))
+
+        if not self.footer_opt:
+            self._replace_in_html_wrapper('FOOTER_WRAPPER', '')
+            
 
 
     def save(self, path):
