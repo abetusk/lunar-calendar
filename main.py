@@ -38,9 +38,17 @@ class Calendar:
         self.html = open('template.html').read()
         self.moon_image = ""
         self.succinct_opt = False
+        self.extra_opt = False
+        self.footer_opt = False
+
+    def footer(self, opt=True):
+        self.footer_opt = opt
 
     def succinct(self, opt=True):
         self.succinct_opt = opt
+
+    def extra(self, opt=True):
+        self.extra_opt = opt
 
     def _replace_in_html(self, key, value):
         self.html = self.html.replace('<!-- {} -->'.format(key), value)
@@ -145,6 +153,68 @@ class Calendar:
         lunation = (date - preceding_new_moon) / (following_new_moon - preceding_new_moon)
 
         mask_id = "mask_" + "".join(random.choices(['a', 'b', 'c', 'd', 'e', 'f', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], k=20))
+        overlay_id = "overlay_" + "".join(random.choices(['a', 'b', 'c', 'd', 'e', 'f', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], k=20))
+
+
+        overlay_svg = ''
+
+        if self.extra_opt:
+          if moon_opt["black"]:
+              overlay_svg = "".join([
+                '<svg viewBox="0 0 100 100">',
+                '<defs>',
+                '<radialGradient id="{0}">',
+                '<stop offset="89%" stop-color="rgba(0,0,0,0.2)" />',
+                '<stop offset="98%" stop-color="rgba(0,0,0,0.1)" />',
+                '<stop offset="100%" stop-color="rgba(0,0,0,0.0)" />',
+                '</radialGradient>',
+                '</defs>',
+                '<circle cx="46.5" cy="46.5" r="49" fill="url(#{0})"/>',
+                '</svg>'
+              ]).format(overlay_id)
+
+          elif moon_opt["blue"]:
+              overlay_svg = "".join([
+                '<svg viewBox="0 0 100 100">',
+                '<defs>',
+                '<radialGradient id="{0}">',
+                '<stop offset="89%" stop-color="rgba(0,0,255,0.15)" />',
+                '<stop offset="98%" stop-color="rgba(0,0,128,0.05)" />',
+                '<stop offset="100%" stop-color="rgba(0,0,0,0.0)" />',
+                '</radialGradient>',
+                '</defs>',
+                '<circle cx="46.5" cy="46.5" r="49" fill="url(#{0})"/>',
+                '</svg>'
+              ]).format(overlay_id)
+
+          elif moon_opt["full"]:
+              overlay_svg = "".join([
+                '<svg viewBox="0 0 100 100">',
+                '<defs>',
+                '<radialGradient id="{0}">',
+                '<stop offset="89%" stop-color="rgba(255,255,255,0.5)" />',
+                '<stop offset="96%" stop-color="rgba(128,128,128,0.05)" />',
+                '<stop offset="100%" stop-color="rgba(64,64,64,0.00)" />',
+                '</radialGradient>',
+                '</defs>',
+                '<circle cx="46.5" cy="46.5" r="49" fill="url(#{0})"/>',
+                '</svg>'
+              ]).format(overlay_id)
+
+          elif moon_opt["new"]:
+              overlay_svg = "".join([
+                '<svg viewBox="0 0 100 100">',
+                '<defs>',
+                '<radialGradient id="{0}">',
+                '<stop offset="89%" stop-color="rgba(0,0,0,0.15)" />',
+                '<stop offset="96%" stop-color="rgba(0,0,0,0.05)" />',
+                '<stop offset="100%" stop-color="rgba(0,0,0,0.00)" />',
+                '</radialGradient>',
+                '</defs>',
+                '<circle cx="46.5" cy="46.5" r="49" fill="url(#{0})"/>',
+                '</svg>'
+              ]).format(overlay_id)
+
 
         VIEW_BOX_SIZE = 1
         svg_str = "".join([
@@ -152,7 +222,14 @@ class Calendar:
           '<mask id="{0}" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">{1}</mask>',
           '</svg>']).format(mask_id, self._make_path_mask(lunation, VIEW_BOX_SIZE, moon_opt))
 
-        return '\n{0} <img src="{1}" width="93%" style="mask: url(#{2}); -webkit-mask: url(#{2});"></img>'.format(svg_str, self.moon_image, mask_id)
+        img_ele = "".join([
+            '\n{0}',
+            
+            '<img src="{1}" width="93%" style="mask: url(#{2}); -webkit-mask: url(#{2});"></img>'
+        ]).format(svg_str, self.moon_image, mask_id)
+
+
+        return '\n{0} <div class="img-overlay-wrap"> <img src="{1}" width="93%" style="mask: url(#{2}); -webkit-mask: url(#{2});"></img> {3} </div>'.format(svg_str, self.moon_image, mask_id, overlay_svg)
 
     def _get_moon_dates(self, year, next_fn):
         start_of_year = ephem.Date(datetime.date(year, 1, 1))
@@ -275,11 +352,14 @@ def usage(io):
     io.write("\n")
     io.write("usage:\n")
     io.write("\n")
-    io.write("  python3 main.py [-h] [-v] [-y year] [-o output_file] [-i moon_image] [year]\n")
+    io.write("  python3 main.py [-h] [-v] [-y year] [-E] [-M] [-S] [-F] [-o output_file] [-i moon_image] [year]\n")
     io.write("\n")
     io.write("    -y year         Year to generate\n")
     io.write("    -o output_file  Output HTML (default 'lunar_calendar_YEAR.html')\n")
     io.write("    -M              Use moon image\n")
+    io.write("    -E              Enhance new, full, black and blue moon images with colors (image only)\n")
+    io.write("    -S              Succinct (remove footer and new/full moon dates)\n")
+    io.write("    -F              Remove only the footer\n")
     io.write("    -i moon_image   Moon image to use ('{0}')\n".format(DEFAULT_MOON_IMAGE))
     io.write("    -h              Help (this screen)\n")
     io.write("    -v              Print version\n")
@@ -295,9 +375,10 @@ def main():
     moon_img_opt = False
     succinct_opt = False
     extra_opt = False
+    footer_opt = True
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hvo:y:Mi:SE", ["help", "version", "year=", "output=", "image=", "moon", "succinct", "extra"])
+        opts, args = getopt.getopt(sys.argv[1:], "hvo:y:Mi:SEF", ["help", "version", "year=", "output=", "image=", "moon", "succinct", "extra", "no-footer"])
     except getopt.GetoptError as err:
         sys.stderr.write(str(err) + "\n")
         usage(sys.stderr)
@@ -323,6 +404,8 @@ def main():
             succinct_opt = True
         elif opt in ["-E", "--extra"]:
             extra_opt = True
+        elif opt in ["-F", "--no-footer"]:
+            footer_opt = False
         else:
             sys.stderr.write("Unknown option: " + opt)
             usage(sys.stdout)
@@ -348,8 +431,9 @@ def main():
     
     cal = Calendar()
 
-    if succinct_opt:
-        cal.succinct()
+    if succinct_opt: cal.succinct(succinct_opt)
+    if extra_opt: cal.extra(extra_opt)
+    if footer_opt: cal.footer(footer_opt)
 
     if moon_img_opt:
         cal.populate(year, moon_img)

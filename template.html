@@ -86,6 +86,32 @@
         .spacer td{
             height: 20px;
         }
+
+        /*
+          image-overlay-css-start
+          https://stackoverflow.com/a/43806724/4002265
+          https://stackoverflow.com/users/804867/hungerstar
+        */
+        .img-overlay-wrap {
+          position: relative;
+          display: inline-block;
+        }
+
+        .img-overlay-wrap img {
+           display: block;
+           max-width: 100%;
+           height: auto;
+        }
+
+        .img-overlay-wrap svg {
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
+        /*
+          image-overlay-css-end
+        */
+
     </style>
     <!-- <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet"> -->
     <link href="font/goog_open_sans.css" rel="stylesheet">
