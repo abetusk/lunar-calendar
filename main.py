@@ -31,7 +31,7 @@ This source code is released under the MIT Open Source License
 '''
 
 LUNAR_CALENDAR_VERSION = "0.2.0"
-DEFAULT_MOON_IMAGE = 'data/supermoon_l3_bw.png'
+DEFAULT_MOON_IMAGE = 'data/supermoon_l3_bw_s.png'
 
 class Calendar:
     def __init__(self):
@@ -40,6 +40,7 @@ class Calendar:
         self.succinct_opt = False
         self.extra_opt = False
         self.footer_opt = False
+        self.bg_color = ''
 
     def footer(self, opt=True):
         self.footer_opt = opt
@@ -50,11 +51,14 @@ class Calendar:
     def extra(self, opt=True):
         self.extra_opt = opt
 
+    def backgroundColor(self, col):
+        self.bg_color = col
+
     def _replace_in_html(self, key, value):
         self.html = self.html.replace('<!-- {} -->'.format(key), value)
 
     def _replace_in_html_wrapper(self, key, value):
-        s = '<!-- {0}_BEG -->.*<!-- {0}_END -->'.format(key)
+        s = '(<!--|\/\*) {0}_BEG (-->|\*\/).*(<!--|\/\*) {0}_END (-->|\*\/)'.format(key)
         self.html = re.sub( s, value, self.html )
 
     def _calc_terminator_arc(self, lunation, disc_radius):
@@ -321,6 +325,8 @@ class Calendar:
             self._replace_in_html('NEW_MOONS',  ''.join(new_moon_markup))
             self._replace_in_html('FULL_MOONS', ''.join(full_moon_markup))
 
+        if len(self.bg_color) > 0:
+            self._replace_in_html_wrapper('BG_COLOR_WRAPPER', "background-color: {0};".format(self.bg_color))
 
 
     def save(self, path):
@@ -377,8 +383,10 @@ def main():
     extra_opt = False
     footer_opt = True
 
+    bg_color = ''
+
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hvo:y:Mi:SEF", ["help", "version", "year=", "output=", "image=", "moon", "succinct", "extra", "no-footer"])
+      opts, args = getopt.getopt(sys.argv[1:], "hvo:y:Mi:SEFc:", ["help", "version", "year=", "output=", "image=", "moon", "succinct", "extra", "no-footer", "color"])
     except getopt.GetoptError as err:
         sys.stderr.write(str(err) + "\n")
         usage(sys.stderr)
@@ -406,6 +414,8 @@ def main():
             extra_opt = True
         elif opt in ["-F", "--no-footer"]:
             footer_opt = False
+        elif opt in ["-c", "--color"]:
+            bg_color = arg
         else:
             sys.stderr.write("Unknown option: " + opt)
             usage(sys.stdout)
@@ -433,7 +443,8 @@ def main():
 
     if succinct_opt: cal.succinct(succinct_opt)
     if extra_opt: cal.extra(extra_opt)
-    if footer_opt: cal.footer(footer_opt)
+    cal.footer(footer_opt)
+    if len(bg_color) > 0: cal.backgroundColor(bg_color)
 
     if moon_img_opt:
         cal.populate(year, moon_img)
