@@ -224,13 +224,13 @@ class Calendar:
           '</svg>']).format(mask_id, self._make_path_mask(lunation, VIEW_BOX_SIZE, moon_opt))
 
         img_ele = "".join([
-            '\n{0}',
-            
-            '<img src="{1}" width="93%" style="mask: url(#{2}); -webkit-mask: url(#{2});"></img>'
-        ]).format(svg_str, self.moon_image, mask_id)
+            '\n{0} ',
+          '<div class="img-overlay-wrap"> ',
+          '<img src="{1}" width="100%" style="mask: url(#{2}); -webkit-mask: url(#{2});"></img> ',
+          '{3} ',
+          '</div>']).format(svg_str, self.moon_image, mask_id, overlay_svg)
 
-
-        return '\n{0} <div class="img-overlay-wrap"> <img src="{1}" width="93%" style="mask: url(#{2}); -webkit-mask: url(#{2});"></img> {3} </div>'.format(svg_str, self.moon_image, mask_id, overlay_svg)
+        return img_ele
 
     def _get_moon_dates(self, year, next_fn):
         start_of_year = ephem.Date(datetime.date(year, 1, 1))
@@ -367,6 +367,7 @@ def usage(io):
     io.write("    -E              Enhance new, full, black and blue moon images with colors (image only)\n")
     io.write("    -S              Succinct (remove footer and new/full moon dates)\n")
     io.write("    -F              Remove only the footer\n")
+    io.write("    -c              Background color (hex format or rgb format, default #142d58)\n")
     io.write("    -i moon_image   Moon image to use ('{0}')\n".format(DEFAULT_MOON_IMAGE))
     io.write("    -h              Help (this screen)\n")
     io.write("    -v              Print version\n")
