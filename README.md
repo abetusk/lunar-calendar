@@ -62,3 +62,5 @@ License
 ---
 
 [MIT](LICENSE)
+
+[Full moon image](https://en.wikipedia.org/wiki/Full_moon#/media/File:Supermoon_Nov-14-2016-minneapolis.jpg) provided by [Tomuren](https://commons.wikimedia.org/wiki/User:Tomruen) under a CC-BY-SA4.0 license.
