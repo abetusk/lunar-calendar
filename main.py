@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import calendar
 import datetime
 import ephem # see http://rhodesmill.org/pyephem/
@@ -159,6 +161,14 @@ class Calendar:
 
         overlay_svg = ''
 
+        cx = 46.5
+        cy = 46.5
+        r = 49
+
+        cx = 50
+        cy = 50
+        r = 52
+
         if self.extra_opt:
           if moon_opt["black"]:
               overlay_svg = "".join([
@@ -170,9 +180,9 @@ class Calendar:
                 '<stop offset="100%" stop-color="rgba(0,0,0,0.0)" />',
                 '</radialGradient>',
                 '</defs>',
-                '<circle cx="46.5" cy="46.5" r="49" fill="url(#{0})"/>',
+                '<circle cx="{1}" cy="{2}" r="{3}" fill="url(#{0})"/>',
                 '</svg>'
-              ]).format(overlay_id)
+              ]).format(overlay_id, cx, cy, r)
 
           elif moon_opt["blue"]:
               overlay_svg = "".join([
@@ -184,9 +194,9 @@ class Calendar:
                 '<stop offset="100%" stop-color="rgba(0,0,0,0.0)" />',
                 '</radialGradient>',
                 '</defs>',
-                '<circle cx="46.5" cy="46.5" r="49" fill="url(#{0})"/>',
+                '<circle cx="{1}" cy="{2}" r="{3}" fill="url(#{0})"/>',
                 '</svg>'
-              ]).format(overlay_id)
+              ]).format(overlay_id, cx, cy, r)
 
           elif moon_opt["full"]:
               overlay_svg = "".join([
@@ -198,9 +208,9 @@ class Calendar:
                 '<stop offset="100%" stop-color="rgba(64,64,64,0.00)" />',
                 '</radialGradient>',
                 '</defs>',
-                '<circle cx="46.5" cy="46.5" r="49" fill="url(#{0})"/>',
+                '<circle cx="{1}" cy="{2}" r="{3}" fill="url(#{0})"/>',
                 '</svg>'
-              ]).format(overlay_id)
+              ]).format(overlay_id, cx, cy, r)
 
           elif moon_opt["new"]:
               overlay_svg = "".join([
@@ -212,9 +222,9 @@ class Calendar:
                 '<stop offset="100%" stop-color="rgba(0,0,0,0.00)" />',
                 '</radialGradient>',
                 '</defs>',
-                '<circle cx="46.5" cy="46.5" r="49" fill="url(#{0})"/>',
+                '<circle cx="{1}" cy="{2}" r="{3}" fill="url(#{0})"/>',
                 '</svg>'
-              ]).format(overlay_id)
+              ]).format(overlay_id, cx, cy, r)
 
 
         VIEW_BOX_SIZE = 1
@@ -326,7 +336,7 @@ class Calendar:
             self._replace_in_html_wrapper('BG_COLOR_WRAPPER', "background-color: {0};".format(self.bg_color))
 
         if not self.footer_opt:
-            self._replace_in_html_wrapper('FOOTER_WRAPPER', '')
+            self._replace_in_html_wrapper('FOOTER_WRAPPER', '<footer> &nbsp; </footer> ')
             
 
 
