@@ -1,5 +1,7 @@
 # Lunar Calendar
 
+Based off of the awesome [Lunar Calendar project](https://codebox.net/pages/lunar-calendar) by [codebox](https://github.com/codebox/lunar-calendar).
+
 This Python utility will generate an HTML Lunar Calendar for the year that you specify.
 To run the utility, pass the year as a command-line argument - for example:
 
@@ -56,5 +58,7 @@ usage:
 ```
 
 
+License
+---
 
-
+[MIT](LICENSE)
