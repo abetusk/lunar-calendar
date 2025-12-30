@@ -4,8 +4,11 @@ This Python utility will generate an HTML Lunar Calendar for the year that you s
 To run the utility, pass the year as a command-line argument - for example:
 
 ```
-python main.py 2018
+python3 main.py 2030
 ```
+
+As well as displaying the phase of the moon for each day of the year, the calendar lists the exact dates and times of each full moon
+and new moon, highlighting any [blue moons](https://en.wikipedia.org/wiki/Blue_moon) or [black moons](https://en.wikipedia.org/wiki/Black_moon) that occur.
 
 The code uses the PyEphem library, which [you will need to install](https://rhodesmill.org/pyephem/#installation) before running it.
 
@@ -16,14 +19,21 @@ Examples
 
 `python3 main.py -y 2026 -F`
 
-<img src="img/lucal-2026-F.png" width="800px" alt="Lunar Calendar for 2026" /><br>
-[link to generated HTML file](pregenerated/lucal-2026-F.html)
+<img src="img/lucal-2026-F_B5.png" width="800px" alt="Lunar Calendar for 2026" /><br>
+[(generated HTML)](pregenerated/lucal-2026-F.html)
 
+---
 
+`python3 main.py -y 2026 -M -E -F`
+
+<img src="img/lucal-2026-MEF_A3.png" width="800px" alt="Lunar Calendar for 2026 with moon images" /><br>
+[(generated HTML)](pregenerated/lucal-2026-MEF.html)
 
 
 Usage
 ---
+
+More complicated options are available:
 
 ```
 Lunar Calendar generator
@@ -47,5 +57,4 @@ usage:
 
 
 
-As well as displaying the phase of the moon for each day of the year, the calendar lists the exact dates and times of each full moon
-and new moon, highlighting any [blue moons](https://en.wikipedia.org/wiki/Blue_moon) or [black moons](https://en.wikipedia.org/wiki/Black_moon) that occur.
+
